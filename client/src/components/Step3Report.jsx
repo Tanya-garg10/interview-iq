@@ -23,12 +23,18 @@ function Step3Report({ report }) {
     communication = 0,
     correctness = 0,
     questionWiseScore = [],
+    confidenceTrend = [],
   } = report;
 
   const questionScoreData = questionWiseScore.map((score, index) => ({
     name: `Q${index + 1}`,
     score: score.score || 0
   }))
+
+  const confidenceTrendData = confidenceTrend.map((score, index) => ({
+    name: `${index * 1.5}s`,
+    score: score
+  }));
 
   const skills = [
     { label: "Confidence", value: confidence },
@@ -303,6 +309,40 @@ function Step3Report({ report }) {
 
 
           </motion.div>
+
+          {confidenceTrendData.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className='bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-8'>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-4 sm:mb-6">
+              Behavioral Analytics (Live Confidence)
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">Tracking eye contact, posture, and facial expressions during the interview.</p>
+
+            <div className='h-64 sm:h-72'>
+
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={confidenceTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{fontSize: 10}} />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip />
+                  <Area type="monotone"
+                    dataKey="score"
+                    stroke="#3b82f6"
+                    fill="#bfdbfe"
+                    strokeWidth={3} />
+                </AreaChart>
+
+              </ResponsiveContainer>
+
+
+            </div>
+
+
+          </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0 }}

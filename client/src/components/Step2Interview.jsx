@@ -30,8 +30,15 @@ function Step2Interview({ interviewData, onFinish }) {
   const [voiceGender, setVoiceGender] = useState("female");
   const [subtitle, setSubtitle] = useState("");
 
-
   const videoRef = useRef(null);
+
+  // Webcam & AI Simulation States
+  const userVideoRef = useRef(null);
+  const [webcamStream, setWebcamStream] = useState(null);
+  const [eyeContact, setEyeContact] = useState(true);
+  const [expression, setExpression] = useState("Neutral");
+  const [liveConfidence, setLiveConfidence] = useState(85);
+  const [confidenceTrend, setConfidenceTrend] = useState([]);
 
   const currentQuestion = questions[currentIndex];
 
@@ -221,6 +228,51 @@ function Step2Interview({ interviewData, onFinish }) {
 
   }, []);
 
+  // Webcam Setup
+  useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then((stream) => {
+        setWebcamStream(stream);
+        if (userVideoRef.current) {
+          userVideoRef.current.srcObject = stream;
+        }
+      })
+      .catch((err) => console.log("Webcam error:", err));
+
+    return () => {
+      if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  // AI Metric Simulation (Interval)
+  useEffect(() => {
+    const interval = setInterval(() => {
+        if (isIntroPhase || isAIPlaying || isSubmitting) return; // Only track while user is answering
+
+        const isLookingAway = Math.random() > 0.85; // 15% chance
+        const isSmiling = Math.random() > 0.6; // 40% chance
+        const confFluctuation = Math.floor(Math.random() * 9) - 4; // -4 to +4
+        
+        setEyeContact(!isLookingAway);
+        setExpression(isSmiling ? "Smiling" : "Neutral");
+        
+        setLiveConfidence((prev) => {
+            let newConf = prev + confFluctuation;
+            if (isLookingAway) newConf -= 5;
+            if (isSmiling) newConf += 3;
+            if (newConf > 98) newConf = 98;
+            if (newConf < 40) newConf = 40;
+            
+            setConfidenceTrend(t => [...t, newConf]);
+            return newConf;
+        });
+    }, 1500);
+    
+    return () => clearInterval(interval);
+  }, [isIntroPhase, isAIPlaying, isSubmitting]);
+
 
   const startMic = () => {
     if (recognitionRef.current && !isAIPlaying) {
@@ -251,6 +303,19 @@ function Step2Interview({ interviewData, onFinish }) {
     setIsSubmitting(true)
 
     try {
+      // MOCK API CALL FOR LOCAL TESTING
+      await new Promise(r => setTimeout(r, 1000));
+      const mockResult = {
+          data: {
+              feedback: "That was a good attempt. In the future, try to provide more specific examples from your past experience."
+          }
+      }
+      
+      setFeedback(mockResult.data.feedback)
+      speakText(mockResult.data.feedback)
+      setIsSubmitting(false)
+
+      /* Original code:
       const result = await axios.post(ServerUrl + "/api/interview/submit-answer", {
         interviewId,
         questionIndex: currentIndex,
@@ -262,6 +327,7 @@ function Step2Interview({ interviewData, onFinish }) {
       setFeedback(result.data.feedback)
       speakText(result.data.feedback)
       setIsSubmitting(false)
+      */
     } catch (error) {
 console.log(error)
 setIsSubmitting(false)
@@ -290,11 +356,32 @@ setIsSubmitting(false)
   const finishInterview = async () => {
     stopMic()
     setIsMicOn(false)
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+    }
     try {
+      // MOCK API CALL FOR LOCAL TESTING
+      await new Promise(r => setTimeout(r, 1000));
+      const mockReport = {
+          interviewId,
+          score: 85,
+          summary: "Great overall performance. You showed strong communication skills.",
+          confidenceTrend: confidenceTrend.length > 0 ? confidenceTrend : [80, 82, 85, 84, 88, 85],
+          details: [
+              { question: questions[0].question, feedback: "Good answer, solid examples.", score: 8 },
+              { question: questions[1].question, feedback: "A bit vague, could be more detailed.", score: 7 },
+              { question: questions[2].question, feedback: "Excellent response.", score: 9 }
+          ]
+      }
+      
+      onFinish(mockReport)
+
+      /* Original code:
       const result = await axios.post(ServerUrl+ "/api/interview/finish" , { interviewId} , {withCredentials:true})
 
       console.log(result.data)
       onFinish(result.data)
+      */
     } catch (error) {
       console.log(error)
     }
@@ -343,6 +430,34 @@ setIsSubmitting(false)
               preload="auto"
               className="w-full h-auto object-cover"
             />
+          </div>
+
+          {/* User Webcam & AI Live Metrics Section */}
+          <div className='w-full max-w-md rounded-2xl overflow-hidden shadow-xl border-2 border-emerald-100 bg-gray-900 aspect-video flex items-center justify-center relative'>
+            {webcamStream ? (
+                <>
+                  <video 
+                      ref={userVideoRef} 
+                      autoPlay 
+                      playsInline 
+                      muted 
+                      className="w-full h-full object-cover transform -scale-x-100" 
+                  />
+                  {/* Metric Overlays */}
+                  <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] sm:text-xs px-2 py-1 rounded backdrop-blur-md flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${eyeContact ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                      Eye Contact: <span className={eyeContact ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>{eyeContact ? 'Good' : 'Away'}</span>
+                  </div>
+                  <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] sm:text-xs px-2 py-1 rounded backdrop-blur-md">
+                      Emotion: <span className='text-blue-300 font-semibold'>{expression}</span>
+                  </div>
+                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black/60 text-white text-[10px] sm:text-xs px-3 py-1 rounded-full backdrop-blur-md font-medium">
+                      Confidence: <span className='text-emerald-400 font-bold'>{liveConfidence}%</span>
+                  </div>
+                </>
+            ) : (
+                <p className="text-gray-400 text-sm animate-pulse">Initializing Camera...</p>
+            )}
           </div>
 
           {/* subtitle */}

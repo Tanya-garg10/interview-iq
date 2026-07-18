@@ -19,8 +19,19 @@ function App() {
   useEffect(()=>{
     const getUser = async () => {
       try {
+        // MOCK USER FOR LOCAL TESTING
+        const mockUser = {
+          _id: "mock-user-123",
+          name: "Test User",
+          email: "test@example.com",
+          credits: 100
+        }
+        dispatch(setUserData(mockUser))
+        
+        /* Original Code:
         const result = await axios.get(ServerUrl + "/api/user/current-user", {withCredentials:true})
         dispatch(setUserData(result.data))
+        */
       } catch (error) {
         console.log(error)
         dispatch(setUserData(null))

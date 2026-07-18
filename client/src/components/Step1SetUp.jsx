@@ -57,6 +57,26 @@ function Step1SetUp({ onStart }) {
     const handleStart = async () => {
         setLoading(true)
         try {
+           // MOCK API CALL FOR LOCAL TESTING
+           await new Promise(r => setTimeout(r, 1500)); // simulate loading
+           const mockData = {
+               creditsLeft: userData ? userData.credits - 10 : 90,
+               interviewId: "mock-interview-" + Date.now(),
+               userName: userData ? userData.name : "Test User",
+               questions: [
+                   { question: "Can you tell me about your background and experience?", timeLimit: 60 },
+                   { question: "What do you consider to be your greatest professional achievement?", timeLimit: 60 },
+                   { question: "How do you handle conflict or difficult situations at work?", timeLimit: 60 }
+               ]
+           };
+           
+           if(userData){
+               dispatch(setUserData({...userData , credits: mockData.creditsLeft}))
+           }
+           setLoading(false)
+           onStart(mockData)
+
+           /* Original code:
            const result = await axios.post(ServerUrl + "/api/interview/generate-questions" , {role, experience, mode , resumeText, projects, skills } , {withCredentials:true}) 
            console.log(result.data)
            if(userData){
@@ -64,7 +84,7 @@ function Step1SetUp({ onStart }) {
            }
            setLoading(false)
            onStart(result.data)
-
+           */
         } catch (error) {
             console.log(error)
             setLoading(false)
